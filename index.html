@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#4f6ef7">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Планнер">
+    <title>📋 Планнер</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root {
+            --bg: #ffffff;
+            --card-bg: #ffffff;
+            --text: #111111;
+            --accent: #4f6ef7;
+            --accent-light: #f0f4ff;
+            --border: #e2e2e2;
+            --radius: 0px;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 4rem 16px 16px;
+            min-height: 100vh;
+            -webkit-tap-highlight-color: transparent;
+            transition: background 0.2s;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .container { max-width: 600px; margin:0 auto; }
+        [contenteditable]:focus {
+            outline: 1px solid var(--accent);
+            background: var(--accent-light);
+            border-radius: 0;
+        }
+
+        .screen { display: none; }
+        .screen.active { display: block; }
+
+        .menu-card, .day-card, .modal-content, .progress {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            padding: 20px;
+            margin-bottom: 16px;
+            border-radius: var(--radius);
+        }
+
+        #menuScreen .container { text-align: center; }
+        #menuScreen .menu-card { text-align: center; max-width: 400px; margin-left: auto; margin-right: auto; }
+        #menuScreen .menu-row { justify-content: center; }
+
+        .menu-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .menu-row label { font-weight: 500; font-size:0.9rem; min-width: 90px; text-align: right; }
+        select, input[type="month"], input[type="text"], input[type="time"] {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            background: var(--card-bg);
+            font-family: inherit;
+            font-size:0.95rem;
+            flex:1;
+            min-width: 140px;
+            border-radius: var(--radius);
+            transition: border-color 0.2s;
+        }
+        select:focus, input:focus { border-color: var(--accent); outline: none; }
+
+        .btn {
+            padding: 10px 18px;
+            border: 1px solid var(--accent);
+            font-weight: 500;
+            font-size:0.95rem;
+            cursor: pointer;
+            background: var(--accent);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            border-radius: var(--radius);
+        }
+        .btn-outline { background: transparent; color: var(--accent); }
+        .btn-sm { padding: 6px 14px; font-size:0.85rem; }
+        .btn-danger { background:#e53e3e; color:#fff; border-color:#e53e3e; }
+
+        .plan-list { list-style: none; }
+        .plan-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            margin-bottom: 8px;
+            border-radius: var(--radius);
+            transition: border-color 0.2s;
+        }
+        .plan-list li:hover { border-color: var(--accent); }
+
+        .progress { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+        .circle {
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            background: conic-gradient(#22c55e var(--pct,0%), #e5e7eb 0);
+            display: flex; align-items:center; justify-content:center;
+            position: relative;
+            border: 1px solid var(--border);
+        }
+        .circle::after {
+            content: '';
+            position: absolute;
+            width: 42px; height: 42px;
+            border-radius: 50%;
+            background: var(--bg);
+        }
+        .circle span { position: relative; z-index:1; font-weight:600; font-size:0.9rem; }
+        .progress-info h3 { font-size:1rem; font-weight:500; margin-bottom:2px; }
+        .progress-info p { font-size:0.85rem; color: #555; }
+        .reset-btn {
+            margin-left: auto;
+            background: none;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 6px 14px;
+            font-weight: 500;
+            cursor: pointer;
+            font-size:0.85rem;
+            border-radius: var(--radius);
+        }
+
+        .day-card { border-left: 3px solid var(--accent); padding: 14px; }
+        .day-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            justify-content: space-between;
+        }
+        .day-title { font-weight: 600; font-size:1rem; display: flex; align-items: center; gap: 8px; }
+        .day-icon {
+            width: 28px; height: 28px;
+            background: var(--accent);
+            color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 600; font-size:0.85rem;
+        }
+        .badge {
+            font-size:0.75rem; background: var(--accent-light); color: var(--accent);
+            padding: 3px 8px; border: 1px solid var(--accent); font-weight: 500;
+        }
+        .completed-all { border-left-color: #22c55e; background: #f0fdf4; }
+        .completed-all .badge { background:#d1fae5; color:#059669; border-color:#22c55e; }
+        .ex-list { list-style:none; }
+        .ex-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+            flex-wrap: wrap;
+        }
+        .ex-item.completed { background:#f0fdf4; }
+        .ex-item.completed .ex-name { text-decoration:line-through; color:#888; }
+
+        .checkbox-label {
+            display: flex; align-items: center; flex-shrink: 0; cursor: pointer;
+        }
+        .task-checkbox { display: none; }
+        .checkbox-custom {
+            width: 20px; height: 20px;
+            border: 2px solid #ccc;
+            display: flex; align-items: center; justify-content: center;
+            background:#fff;
+            transition: 0.2s;
+        }
+        .task-checkbox:checked + .checkbox-custom {
+            background: #22c55e; border-color: #22c55e;
+        }
+        .checkbox-custom::after {
+            content:'✓'; color:white; font-size:12px; opacity:0;
+        }
+        .task-checkbox:checked + .checkbox-custom::after { opacity:1; }
+
+        .task-info {
+            flex:1; display: flex; flex-direction: column; min-width: 0;
+        }
+        .ex-name { font-weight:500; font-size:0.9rem; word-break: break-word; }
+        .ex-detail { font-size:0.8rem; color:#777; }
+        .ex-deadline { font-size:0.75rem; color: var(--accent); }
+
+        .edit-task-btn, .delete-btn {
+            background:none; border:none; font-size:1rem; color:#aaa;
+            cursor:pointer; padding:4px; flex-shrink:0;
+        }
+        .edit-task-btn:hover { color: var(--accent); }
+        .delete-btn:hover { color: #e53e3e; }
+
+        .add-ex-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+        .add-ex-row input {
+            flex:1; padding: 6px 12px; border: 1px solid var(--border);
+            font-size:0.85rem; background: #fafafa; border-radius: var(--radius);
+        }
+        .add-btn {
+            background: var(--accent); color:#fff; border: 1px solid var(--accent);
+            padding: 6px 14px; font-weight:600; font-size:0.85rem; cursor: pointer;
+        }
+
+        .back-btn { margin-bottom: 16px; }
+
+        .modal {
+            position: fixed; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.4); display: flex; align-items:center; justify-content:center;
+            z-index: 10;
+        }
+        .modal-content {
+            background: var(--card-bg); border: 1px solid var(--border);
+            padding: 24px; max-width: 400px; width: 90%; text-align: center;
+            border-radius: var(--radius);
+        }
+        .color-swatch {
+            width: 36px; height: 36px; border: 2px solid transparent;
+            cursor: pointer; display: inline-block; margin: 2px;
+        }
+        .color-swatch.active { border-color: #111; }
+        .bg-swatch {
+            width: 36px; height: 36px; border: 2px solid #ccc;
+            cursor: pointer; display: inline-block; margin: 2px;
+        }
+        .swatch-group { margin: 12px 0; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- Меню -->
+    <div id="menuScreen" class="screen active">
+        <div class="menu-card">
+            <h2 contenteditable="true" id="menuTitle" style="font-weight:600; margin-bottom:8px;">📋 Мой планнер</h2>
+            <p contenteditable="true" id="menuSubtitle" style="color:#777; margin-bottom:20px;">Выберите направление и месяц</p>
+            <div class="menu-row">
+                <label>Направление:</label>
+                <select id="directionSelect"></select>
+                <button class="btn btn-sm btn-outline" id="editThemeBtn">🎨</button>
+                <button class="btn btn-sm btn-outline" id="renameDirectionBtn">✏️</button>
+            </div>
+            <div class="menu-row" style="justify-content:center;">
+                <button class="btn btn-sm" id="addDirectionBtn">➕ Новое направление</button>
+            </div>
+            <div class="menu-row">
+                <label>Месяц:</label>
+                <input type="month" id="monthInput">
+            </div>
+            <button class="btn" id="openPlanBtn" style="width:100%; margin-top:6px;">📂 Открыть план</button>
+            <button class="btn btn-outline btn-sm" id="createNewPlanBtn" style="width:100%; margin-top:8px;">➕ Новый план (с датами)</button>
+        </div>
+        <div class="menu-card" style="max-width:400px; margin-left:auto; margin-right:auto;">
+            <h3 style="margin-bottom:12px; font-weight:500;">📌 Существующие планы</h3>
+            <ul id="existingPlansList" class="plan-list"></ul>
+        </div>
+    </div>
+
+    <!-- Редактор плана -->
+    <div id="planScreen" class="screen">
+        <button class="btn btn-outline back-btn" id="backToMenuBtn">← Назад</button>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h1 contenteditable="true" id="planTitle" style="font-weight:600; margin-bottom:4px;">План</h1>
+            <button class="btn btn-sm btn-outline" id="enableNotificationsBtn">🔔 Уведомления</button>
+        </div>
+        <p contenteditable="true" id="planSubtitle" style="color:#777; margin-bottom:16px;"></p>
+        <div class="progress">
+            <div class="circle" id="progressCircle"><span id="progressPercent">0%</span></div>
+            <div class="progress-info">
+                <h3>Общий прогресс</h3>
+                <p id="progressDetails">0 из 0</p>
+            </div>
+            <button class="reset-btn" id="resetBtn">↺ Сброс</button>
+        </div>
+        <div id="daysContainer"></div>
+        <button class="btn add-day-btn" id="addDayBtn" style="width:100%; margin-top:8px;">➕ Добавить день</button>
+    </div>
+
+    <!-- Модалки темы и направления (оставлены без изменений) -->
+    <div id="themeModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h3 style="font-weight:500;">🎨 Тема направления</h3>
+            <p id="themeDirectionName" style="color:#555;"></p>
+            <div class="swatch-group"><label>Фон:</label><div id="bgSwatches"></div></div>
+            <div class="swatch-group"><label>Акцент:</label><div id="accentSwatches"></div></div>
+            <button class="btn" id="applyThemeBtn">Применить</button>
+            <button class="btn btn-outline" id="closeThemeBtn" style="margin-left:8px;">Закрыть</button>
+        </div>
+    </div>
+
+    <div id="directionModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h3 id="directionModalTitle" style="font-weight:500;">Новое направление</h3>
+            <input type="text" id="directionNameInput" placeholder="Название" maxlength="30" style="width:100%; margin:8px 0;">
+            <input type="text" id="directionEmojiInput" placeholder="Эмодзи" maxlength="4" style="width:80px;">
+            <div class="menu-row" style="justify-content:center; margin-top:16px;">
+                <button class="btn" id="saveDirectionBtn">Сохранить</button>
+                <button class="btn btn-outline" id="cancelDirectionBtn">Отмена</button>
+            </div>
+            <p style="color:#e53e3e; margin-top:8px; display:none;" id="directionError">Название не может быть пустым</p>
+        </div>
+    </div>
+</div>
+
+<script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+}
+</script>
+
+<script>
+(function() {
+    const STORAGE_PREFIX = 'planner_';
+    const DIRECTIONS_KEY = 'planner_directions';
+
+    let directions = [];
+    const defaultDirections = [
+        { id: 'training', name: '🏋️ Тренировки', emoji: '🏋️' },
+        { id: 'study', name: '📚 Учёба', emoji: '📚' }
+    ];
+
+    function loadDirections() {
+        const saved = localStorage.getItem(DIRECTIONS_KEY);
+        if (saved) {
+            try { directions = JSON.parse(saved); if (!Array.isArray(directions) || directions.length===0) throw new Error(); } catch(e) { directions = [...defaultDirections]; }
+        } else {
+            directions = [...defaultDirections];
+        }
+    }
+    function saveDirections() { localStorage.setItem(DIRECTIONS_KEY, JSON.stringify(directions)); }
+    function getDirectionById(id) { return directions.find(d => d.id === id); }
+    function getDirectionNameById(id) { const d = getDirectionById(id); return d ? d.name : id; }
+
+    function getThemeBg(dirId) { return localStorage.getItem(`theme_bg_${dirId}`) || '#ffffff'; }
+    function setThemeBg(dirId, color) { localStorage.setItem(`theme_bg_${dirId}`, color); }
+    function getThemeAccent(dirId) { return localStorage.getItem(`theme_accent_${dirId}`) || '#4f6ef7'; }
+    function setThemeAccent(dirId, color) { localStorage.setItem(`theme_accent_${dirId}`, color); }
+
+    function applyTheme(theme) {
+        document.documentElement.style.setProperty('--bg', theme.bg);
+        document.documentElement.style.setProperty('--accent', theme.accent);
+        document.documentElement.style.setProperty('--accent-light', theme.accent + '20');
+        document.querySelector('meta[name="theme-color"]').content = theme.accent;
+    }
+
+    let currentDirectionId = 'training';
+    function applyCurrentTheme() { applyTheme({ bg: getThemeBg(currentDirectionId), accent: getThemeAccent(currentDirectionId) }); }
+
+    function getDaysInMonth(year, month) { return new Date(year, month + 1, 0).getDate(); }
+
+    function createPlanWithDates(directionId, monthStr) {
+        const [year, month] = monthStr.split('-').map(Number);
+        const daysCount = getDaysInMonth(year, month - 1);
+        const monthNames = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+        const exercises = [];
+        for (let d = 1; d <= daysCount; d++) {
+            exercises.push({
+                id: 'd'+d,
+                name: `${d} ${monthNames[month-1]}`,
+                color: getThemeAccent(directionId),
+                items: [ { id: 'e'+d+'_1', name: 'Задача', detail: '', deadlineTime: '', completed: false } ],
+                reminderTime: null
+            });
+        }
+        return {
+            id: Date.now().toString(36), direction: directionId, month: monthStr,
+            name: (getDirectionById(directionId)?.name || 'План') + ' — ' + monthStr,
+            exercises: exercises
+        };
+    }
+
+    function loadPlan(directionId, month) {
+        const key = STORAGE_PREFIX + directionId + '_' + month;
+        const saved = localStorage.getItem(key);
+        if (saved) { try { return JSON.parse(saved); } catch(e) {} }
+        return createPlanWithDates(directionId, month);
+    }
+
+    function savePlan(plan) {
+        const key = STORAGE_PREFIX + plan.direction + '_' + plan.month;
+        localStorage.setItem(key, JSON.stringify(plan));
+    }
+
+    function deletePlan(plan) { localStorage.removeItem(STORAGE_PREFIX + plan.direction + '_' + plan.month); }
+
+    function getAllPlans() {
+        const plans = [];
+        for (let i=0; i<localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith(STORAGE_PREFIX)) {
+                const parts = key.substring(STORAGE_PREFIX.length).split('_');
+                if (parts.length === 2) {
+                    const [dirId, month] = parts;
+                    const data = JSON.parse(localStorage.getItem(key));
+                    data.direction = dirId; data.month = month;
+                    plans.push(data);
+                }
+            }
+        }
+        return plans;
+    }
+
+    // Уведомления
+    let notificationsEnabled = false;
+    let scheduledTimeouts = [];
+
+    function requestNotificationPermission() {
+        if (!('Notification' in window)) { alert('Ваш браузер не поддерживает уведомления'); return; }
+        Notification.requestPermission().then(perm => {
+            if (perm === 'granted') {
+                notificationsEnabled = true;
+                alert('Уведомления включены!');
+                if (currentPlan) renderPlanEditor();
+            } else {
+                alert('Разрешение не получено');
+            }
+        });
+    }
+
+    function clearAllScheduledNotifications() {
+        scheduledTimeouts.forEach(timeout => clearTimeout(timeout));
+        scheduledTimeouts = [];
+    }
+
+    function scheduleReminder(dayName, timeStr, dayIndex) {
+        if (!timeStr || !notificationsEnabled) return;
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const now = new Date();
+        const reminderDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0);
+        if (reminderDate <= now) reminderDate.setDate(reminderDate.getDate() + 1);
+        const timeoutMs = reminderDate - now;
+        const timeoutId = setTimeout(() => {
+            showDayNotification(dayName);
+            scheduleReminder(dayName, timeStr, dayIndex);
+        }, timeoutMs);
+        scheduledTimeouts.push(timeoutId);
+    }
+
+    function showDayNotification(dayName) {
+        if (!notificationsEnabled) return;
+        new Notification('📋 Напоминание', {
+            body: `Сегодня: ${dayName}. Проверьте задачи!`,
+            icon: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>',
+            tag: 'daily-reminder'
+        });
+    }
+
+    function scheduleAllRemindersForPlan(plan) {
+        clearAllScheduledNotifications();
+        if (!notificationsEnabled || !plan) return;
+        plan.exercises.forEach((day, idx) => {
+            if (day.reminderTime) scheduleReminder(day.name, day.reminderTime, idx);
+        });
+    }
+
+    // UI элементы
+    const menuScreen = document.getElementById('menuScreen');
+    const planScreen = document.getElementById('planScreen');
+    const directionSelect = document.getElementById('directionSelect');
+    const monthInput = document.getElementById('monthInput');
+    const openPlanBtn = document.getElementById('openPlanBtn');
+    const createNewPlanBtn = document.getElementById('createNewPlanBtn');
+    const existingPlansList = document.getElementById('existingPlansList');
+    const backToMenuBtn = document.getElementById('backToMenuBtn');
+    const planTitle = document.getElementById('planTitle');
+    const planSubtitle = document.getElementById('planSubtitle');
+    const daysContainer = document.getElementById('daysContainer');
+    const progressCircle = document.getElementById('progressCircle');
+    const progressPercent = document.getElementById('progressPercent');
+    const progressDetails = document.getElementById('progressDetails');
+    const resetBtn = document.getElementById('resetBtn');
+    const addDayBtn = document.getElementById('addDayBtn');
+    const enableNotificationsBtn = document.getElementById('enableNotificationsBtn');
+
+    const themeModal = document.getElementById('themeModal');
+    const bgSwatches = document.getElementById('bgSwatches');
+    const accentSwatches = document.getElementById('accentSwatches');
+    const applyThemeBtn = document.getElementById('applyThemeBtn');
+    const closeThemeBtn = document.getElementById('closeThemeBtn');
+    const themeDirectionName = document.getElementById('themeDirectionName');
+    const directionModal = document.getElementById('directionModal');
+    const directionModalTitle = document.getElementById('directionModalTitle');
+    const directionNameInput = document.getElementById('directionNameInput');
+    const directionEmojiInput = document.getElementById('directionEmojiInput');
+    const saveDirectionBtn = document.getElementById('saveDirectionBtn');
+    const cancelDirectionBtn = document.getElementById('cancelDirectionBtn');
+    const directionError = document.getElementById('directionError');
+    const editThemeBtn = document.getElementById('editThemeBtn');
+    const renameDirectionBtn = document.getElementById('renameDirectionBtn');
+    const addDirectionBtn = document.getElementById('addDirectionBtn');
+
+    let editingDirectionId = null;
+    let currentPlan = null;
+
+    function showScreen(screen) { menuScreen.classList.remove('active'); planScreen.classList.remove('active'); screen.classList.add('active'); }
+
+    function updateDirectionSelect() {
+        directionSelect.innerHTML = '';
+        directions.forEach(dir => { const opt = document.createElement('option'); opt.value = dir.id; opt.textContent = dir.name; directionSelect.appendChild(opt); });
+        directionSelect.value = currentDirectionId;
+    }
+
+    function renderExistingPlans() {
+        const plans = getAllPlans();
+        existingPlansList.innerHTML = '';
+        if (plans.length === 0) {
+            existingPlansList.innerHTML = '<li style="color:#888; justify-content:center; border:none;">Нет планов</li>';
+            return;
+        }
+        plans.forEach(plan => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <span>${plan.name}</span>
+                <div>
+                    <button class="btn btn-sm btn-outline" data-open>Открыть</button>
+                    <button class="btn btn-sm btn-danger" data-delete style="margin-left:6px;">Удалить</button>
+                </div>
+            `;
+            li.querySelector('[data-open]').addEventListener('click', () => {
+                currentDirectionId = plan.direction;
+                directionSelect.value = currentDirectionId;
+                monthInput.value = plan.month;
+                applyCurrentTheme();
+                openPlan(plan);
+            });
+            li.querySelector('[data-delete]').addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (confirm(`Удалить план "${plan.name}"?`)) { deletePlan(plan); renderExistingPlans(); }
+            });
+            existingPlansList.appendChild(li);
+        });
+    }
+
+    function openPlan(planData) {
+        if (planData) { currentPlan = planData; }
+        else { currentPlan = loadPlan(currentDirectionId, monthInput.value); }
+        applyCurrentTheme();
+        renderPlanEditor();
+        showScreen(planScreen);
+        scheduleAllRemindersForPlan(currentPlan);
+    }
+
+    function escapeHTML(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+    function renderPlanEditor() {
+        if (!currentPlan) return;
+        planTitle.textContent = currentPlan.name || 'План';
+        planSubtitle.textContent = (getDirectionById(currentPlan.direction)?.name || '') + ' — ' + currentPlan.month;
+        daysContainer.innerHTML = '';
+
+        currentPlan.exercises.forEach((day, idx) => {
+            const allDone = day.items && day.items.length > 0 && day.items.every(e => e.completed);
+            const doneCount = day.items ? day.items.filter(e => e.completed).length : 0;
+
+            const card = document.createElement('div');
+            card.className = 'day-card' + (allDone ? ' completed-all' : '');
+            card.style.setProperty('--day-color', day.color || getThemeAccent(currentDirectionId));
+            card.innerHTML = `
+                <div class="day-header">
+                    <div class="day-title">
+                        <div class="day-icon">${idx+1}</div>
+                        <span class="day-name-text" contenteditable="true">${escapeHTML(day.name)}</span>
+                    </div>
+                    <span class="badge">${doneCount}/${day.items.length}</span>
+                </div>
+                ${notificationsEnabled ? `<div class="menu-row" style="margin-bottom:8px;">
+                    <label style="min-width: auto; font-size:0.8rem;">⏰ Напомнить в</label>
+                    <input type="time" class="reminder-time-input" value="${day.reminderTime || ''}" data-day="${idx}" style="min-width:100px; padding:4px 8px;">
+                </div>` : ''}
+                <ul class="ex-list">
+                    ${day.items.map((ex, exIdx) => `
+                        <li class="ex-item ${ex.completed ? 'completed' : ''}">
+                            <label class="checkbox-label">
+                                <input type="checkbox" class="task-checkbox" ${ex.completed ? 'checked' : ''} data-day="${idx}" data-ex="${exIdx}">
+                                <span class="checkbox-custom"></span>
+                            </label>
+                            <div class="task-info">
+                                <span class="ex-name">${escapeHTML(ex.name)}</span>
+                                ${ex.detail ? `<span class="ex-detail">${escapeHTML(ex.detail)}</span>` : ''}
+                                ${ex.deadlineTime ? `<span class="ex-deadline">⏰ ${ex.deadlineTime}</span>` : ''}
+                            </div>
+                            <button class="edit-task-btn" data-day="${idx}" data-ex="${exIdx}">✎</button>
+                            <button class="delete-btn" data-day="${idx}" data-ex="${exIdx}">✕</button>
+                        </li>
+                    `).join('')}
+                </ul>
+                <div class="add-ex-row">
+                    <input type="text" class="new-ex-name" placeholder="Задача" style="flex:2;">
+                    <input type="text" class="new-ex-detail" placeholder="Детали" style="flex:1;">
+                    <input type="time" class="new-ex-time" style="flex:0.8;">
+                    <button class="add-btn add-ex-btn" data-day="${idx}">+</button>
+                </div>
+            `;
+
+            // Напоминание дня
+            if (notificationsEnabled) {
+                const timeInput = card.querySelector('.reminder-time-input');
+                if (timeInput) {
+                    timeInput.addEventListener('change', function() {
+                        currentPlan.exercises[this.dataset.day].reminderTime = this.value;
+                        savePlan(currentPlan);
+                        scheduleAllRemindersForPlan(currentPlan);
+                    });
+                }
+            }
+
+            // Чекбоксы задач
+            card.querySelectorAll('.task-checkbox').forEach(cb => {
+                cb.addEventListener('change', function() {
+                    const d = this.dataset.day, e = this.dataset.ex;
+                    currentPlan.exercises[d].items[e].completed = this.checked;
+                    savePlan(currentPlan);
+                    renderPlanEditor();
+                });
+            });
+
+            // Удаление задачи
+            card.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const d = this.dataset.day, ex = this.dataset.ex;
+                    if (currentPlan.exercises[d].items.length <= 1) {
+                        if (confirm(`Удалить весь день "${currentPlan.exercises[d].name}"?`)) {
+                            currentPlan.exercises.splice(d, 1);
+                            savePlan(currentPlan); renderPlanEditor();
+                        }
+                    } else {
+                        currentPlan.exercises[d].items.splice(ex, 1);
+                        savePlan(currentPlan); renderPlanEditor();
+                    }
+                });
+            });
+
+            // Редактирование задачи (иконка ✎)
+            card.querySelectorAll('.edit-task-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const dayIdx = this.dataset.day, exIdx = this.dataset.ex;
+                    const task = currentPlan.exercises[dayIdx].items[exIdx];
+                    const li = this.closest('.ex-item');
+                    // Заменяем task-info на форму
+                    const taskInfo = li.querySelector('.task-info');
+                    taskInfo.innerHTML = `
+                        <input type="text" class="edit-name" value="${escapeHTML(task.name)}" style="width:100%; margin-bottom:4px;">
+                        <input type="text" class="edit-detail" value="${escapeHTML(task.detail || '')}" placeholder="Детали" style="width:100%; margin-bottom:4px;">
+                        <input type="time" class="edit-time" value="${task.deadlineTime || ''}" style="width:100%;">
+                        <div style="display:flex; gap:4px; margin-top:4px;">
+                            <button class="btn btn-sm save-edit-btn">✓</button>
+                            <button class="btn btn-sm btn-outline cancel-edit-btn">✕</button>
+                        </div>
+                    `;
+                    // Сохранение
+                    const saveBtn = taskInfo.querySelector('.save-edit-btn');
+                    const cancelBtn = taskInfo.querySelector('.cancel-edit-btn');
+                    const nameInput = taskInfo.querySelector('.edit-name');
+                    const detailInput = taskInfo.querySelector('.edit-detail');
+                    const timeInput = taskInfo.querySelector('.edit-time');
+
+                    saveBtn.addEventListener('click', () => {
+                        const newName = nameInput.value.trim() || 'Задача';
+                        task.name = newName;
+                        task.detail = detailInput.value.trim();
+                        task.deadlineTime = timeInput.value;
+                        savePlan(currentPlan);
+                        renderPlanEditor(); // быстрая перерисовка
+                    });
+                    cancelBtn.addEventListener('click', () => {
+                        renderPlanEditor();
+                    });
+                });
+            });
+
+            // Добавление задачи
+            const addBtn = card.querySelector('.add-ex-btn');
+            const nameInp = card.querySelector('.new-ex-name');
+            const detailInp = card.querySelector('.new-ex-detail');
+            const timeInp = card.querySelector('.new-ex-time');
+            addBtn.addEventListener('click', () => {
+                const name = nameInp.value.trim();
+                if (!name) return;
+                currentPlan.exercises[idx].items.push({
+                    id: 'e'+Date.now(),
+                    name, detail: detailInp.value.trim(),
+                    deadlineTime: timeInp.value, completed: false
+                });
+                savePlan(currentPlan);
+                renderPlanEditor();
+            });
+            nameInp.addEventListener('keydown', e => { if (e.key==='Enter') addBtn.click(); });
+
+            daysContainer.appendChild(card);
+        });
+        updateProgress();
+    }
+
+    function updateProgress() {
+        let total=0, done=0;
+        if (currentPlan && currentPlan.exercises) {
+            currentPlan.exercises.forEach(day => { if(day.items) { total += day.items.length; done += day.items.filter(e=>e.completed).length; } });
+        }
+        const pct = total ? Math.round(done/total*100) : 0;
+        progressCircle.style.setProperty('--pct', pct+'%');
+        progressPercent.textContent = pct+'%';
+        progressDetails.textContent = `Выполнено ${done} из ${total}`;
+    }
+
+    // Автосохранение названия плана и подзаголовка
+    planTitle.addEventListener('input', () => { if(currentPlan) { currentPlan.name = planTitle.textContent; savePlan(currentPlan); } });
+    // Автосохранение названий дней (contenteditable)
+    daysContainer.addEventListener('input', (e) => {
+        if (e.target.classList.contains('day-name-text')) {
+            const card = e.target.closest('.day-card');
+            const dayCards = [...daysContainer.children];
+            const idx = dayCards.indexOf(card);
+            if (idx !== -1 && currentPlan) {
+                currentPlan.exercises[idx].name = e.target.textContent.trim();
+                savePlan(currentPlan);
+            }
+        }
+    });
+
+    addDayBtn.addEventListener('click', () => {
+        if (!currentPlan) return;
+        currentPlan.exercises.push({
+            id: 'd'+Date.now(),
+            name: 'День ' + (currentPlan.exercises.length+1),
+            color: getThemeAccent(currentDirectionId),
+            items: [ { id:'e'+Date.now(), name:'Новая задача', detail:'', deadlineTime:'', completed:false } ],
+            reminderTime: null
+        });
+        savePlan(currentPlan); renderPlanEditor();
+    });
+    resetBtn.addEventListener('click', () => {
+        if (!currentPlan) return;
+        if (confirm('Сбросить все отметки?')) {
+            currentPlan.exercises.forEach(d => d.items.forEach(e => e.completed=false));
+            savePlan(currentPlan); renderPlanEditor();
+        }
+    });
+
+    backToMenuBtn.addEventListener('click', () => { clearAllScheduledNotifications(); showScreen(menuScreen); renderExistingPlans(); });
+    openPlanBtn.addEventListener('click', () => { currentDirectionId = directionSelect.value; applyCurrentTheme(); openPlan(); });
+    createNewPlanBtn.addEventListener('click', () => {
+        currentDirectionId = directionSelect.value; applyCurrentTheme();
+        const newPlan = createPlanWithDates(currentDirectionId, monthInput.value);
+        savePlan(newPlan); currentPlan = newPlan;
+        renderPlanEditor(); showScreen(planScreen);
+        scheduleAllRemindersForPlan(currentPlan);
+    });
+
+    enableNotificationsBtn.addEventListener('click', requestNotificationPermission);
+
+    // Направления
+    editThemeBtn.addEventListener('click', () => { currentDirectionId = directionSelect.value; openThemeModal(); });
+    renameDirectionBtn.addEventListener('click', () => {
+        editingDirectionId = directionSelect.value;
+        const dir = getDirectionById(editingDirectionId);
+        directionModalTitle.textContent = 'Переименовать';
+        directionNameInput.value = dir.name.replace(/[^\p{L}\p{N}\s]/gu, '').trim();
+        directionEmojiInput.value = dir.emoji || '';
+        directionError.style.display = 'none';
+        directionModal.style.display = 'flex';
+    });
+    addDirectionBtn.addEventListener('click', () => {
+        editingDirectionId = null;
+        directionModalTitle.textContent = 'Новое направление';
+        directionNameInput.value = ''; directionEmojiInput.value = '';
+        directionError.style.display = 'none';
+        directionModal.style.display = 'flex';
+    });
+    saveDirectionBtn.addEventListener('click', () => {
+        const name = directionNameInput.value.trim();
+        const emoji = directionEmojiInput.value.trim() || '📌';
+        if (!name) { directionError.style.display = 'block'; return; }
+        if (editingDirectionId) {
+            const dir = directions.find(d=>d.id===editingDirectionId);
+            if (dir) { dir.name = emoji + ' ' + name; dir.emoji = emoji; }
+        } else {
+            directions.push({ id:'dir_'+Date.now(), name: emoji + ' ' + name, emoji: emoji });
+        }
+        saveDirections(); updateDirectionSelect();
+        directionSelect.value = editingDirectionId || directions[directions.length-1].id;
+        currentDirectionId = directionSelect.value; applyCurrentTheme();
+        directionModal.style.display = 'none';
+        renderExistingPlans();
+    });
+    cancelDirectionBtn.addEventListener('click', () => { directionModal.style.display = 'none'; });
+    window.addEventListener('click', (e) => { if (e.target===themeModal) themeModal.style.display='none'; if (e.target===directionModal) directionModal.style.display='none'; });
+
+    // Тема
+    const bgOptions = ['#ffffff','#f4f6f9','#1e293b','#fef3c7','#ecfdf5','#fce7f3'];
+    const accentOptions = ['#4f6ef7','#f59e0b','#8b5cf6','#ec4899','#10b981','#ef4444','#6366f1'];
+    function openThemeModal() {
+        themeDirectionName.textContent = getDirectionById(currentDirectionId)?.name || '';
+        renderThemeSwatches();
+        themeModal.style.display = 'flex';
+    }
+    function renderThemeSwatches() {
+        const curBg = getThemeBg(currentDirectionId), curAcc = getThemeAccent(currentDirectionId);
+        bgSwatches.innerHTML = ''; bgOptions.forEach(c => { const d = document.createElement('div'); d.className='bg-swatch'+(c===curBg?' active':''); d.style.background=c; d.dataset.color=c; d.addEventListener('click',()=>{ document.querySelectorAll('#bgSwatches .bg-swatch').forEach(el=>el.classList.remove('active')); d.classList.add('active'); }); bgSwatches.appendChild(d); });
+        accentSwatches.innerHTML = ''; accentOptions.forEach(c => { const d = document.createElement('div'); d.className='color-swatch'+(c===curAcc?' active':''); d.style.background=c; d.dataset.color=c; d.addEventListener('click',()=>{ document.querySelectorAll('#accentSwatches .color-swatch').forEach(el=>el.classList.remove('active')); d.classList.add('active'); }); accentSwatches.appendChild(d); });
+    }
+    applyThemeBtn.addEventListener('click', () => {
+        const bg = bgSwatches.querySelector('.active')?.dataset.color;
+        const acc = accentSwatches.querySelector('.active')?.dataset.color;
+        if (bg) setThemeBg(currentDirectionId, bg);
+        if (acc) setThemeAccent(currentDirectionId, acc);
+        applyCurrentTheme();
+        themeModal.style.display = 'none';
+    });
+    closeThemeBtn.addEventListener('click', () => { themeModal.style.display = 'none'; });
+
+    const menuTitle = document.getElementById('menuTitle'), menuSubtitle = document.getElementById('menuSubtitle');
+    menuTitle.addEventListener('input', ()=> localStorage.setItem('menuTitle', menuTitle.textContent));
+    menuSubtitle.addEventListener('input', ()=> localStorage.setItem('menuSubtitle', menuSubtitle.textContent));
+    if (localStorage.getItem('menuTitle')) menuTitle.textContent = localStorage.getItem('menuTitle');
+    if (localStorage.getItem('menuSubtitle')) menuSubtitle.textContent = localStorage.getItem('menuSubtitle');
+
+    loadDirections(); updateDirectionSelect();
+    currentDirectionId = directions[0]?.id || 'training';
+    directionSelect.value = currentDirectionId; applyCurrentTheme();
+    monthInput.value = new Date().toISOString().slice(0,7);
+    renderExistingPlans();
+    directionSelect.addEventListener('change', () => { currentDirectionId = directionSelect.value; applyCurrentTheme(); });
+
+    if ('Notification' in window && Notification.permission === 'granted') notificationsEnabled = true;
+})();
+</script>
+</body>
+</html>
